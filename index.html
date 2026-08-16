@@ -396,7 +396,9 @@
         badge.className = 'risk-badge ' + cssClass;
         document.getElementById('adviceText').textContent = advice;
 
-        // 详细得分表
+        // ============================================
+        // ✅ 关键修正：明细得分乘以对应的系数
+        // ============================================
         const table = document.getElementById('detailTable');
         table.innerHTML = '';
 
@@ -404,7 +406,7 @@
         riskFactors.forEach(f => {
             const idx = selections[f.id];
             const raw = f.options[idx].score;
-            const weighted = raw * RISK_COEFF;
+            const weighted = raw * RISK_COEFF;   // ← 乘以风险系数
             if (weighted > 0.01) {
                 riskDetail += `<tr><td class="factor-name">${f.label}</td><td class="factor-score">${weighted.toFixed(2)}</td></tr>`;
             }
@@ -413,20 +415,23 @@
         protectiveFactors.forEach(f => {
             const idx = selections[f.id];
             const raw = f.options[idx].score;
-            const weighted = raw * PROT_COEFF;
+            const weighted = raw * PROT_COEFF;   // ← 乘以保护系数
             if (weighted > 0.01) {
                 protDetail += `<tr><td class="factor-name">${f.label}</td><td class="factor-score">${weighted.toFixed(2)}</td></tr>`;
             }
         });
 
+        // 风险因素明细
         if (riskDetail) {
             table.innerHTML += `<tr><td colspan="2" style="font-weight:600; padding-top:8px;">风险因素</td></tr>`;
             table.innerHTML += riskDetail;
         }
+        // 保护因素明细
         if (protDetail) {
             table.innerHTML += `<tr><td colspan="2" style="font-weight:600; padding-top:8px;">保护因素</td></tr>`;
             table.innerHTML += protDetail;
         }
+        // 如果都没有得分
         if (!riskDetail && !protDetail) {
             table.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#888;">所有选项均为最低风险或无暴露</td></tr>`;
         }
@@ -438,7 +443,6 @@
     // 重置
     // ============================================
     document.getElementById('resetBtn').addEventListener('click', function() {
-        // 重置所有选择为第一个选项
         riskFactors.forEach(f => selections[f.id] = 0);
         protectiveFactors.forEach(f => selections[f.id] = 0);
         document.querySelectorAll('.question').forEach(q => {
@@ -471,7 +475,6 @@
     // ============================================
     renderQuestions();
     window.addEventListener('load', function() {
-        // 确保默认选中状态正确
         document.querySelectorAll('.question').forEach(q => {
             const firstBtn = q.querySelector('.options button');
             if (firstBtn) {
@@ -479,7 +482,6 @@
                 firstBtn.classList.add('selected');
             }
         });
-        // 初次计算并显示结果
         calculateAndShow();
     });
 </script>
