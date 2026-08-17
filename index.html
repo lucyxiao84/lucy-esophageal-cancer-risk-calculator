@@ -21,6 +21,36 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.08);
             padding: 28px 30px 40px;
         }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        .lang-btn {
+            background: #1e5f8e;
+            color: white;
+            border: none;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+        .lang-btn:hover {
+            background: #0b3b5a;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0b2b4a;
+            margin-bottom: 4px;
+        }
+        h1 small { font-size: 16px; font-weight: 400; color: #5b7b9a; }
         .disclaimer {
             background: #f8f9fa;
             border-left: 5px solid #d32f2f;
@@ -31,13 +61,6 @@
             margin-bottom: 24px;
         }
         .disclaimer strong { color: #d32f2f; }
-        h1 {
-            font-size: 28px;
-            font-weight: 700;
-            color: #0b2b4a;
-            margin-bottom: 4px;
-        }
-        h1 small { font-size: 16px; font-weight: 400; color: #5b7b9a; }
         .section {
             margin-top: 28px;
             border-top: 1px solid #e6edf4;
@@ -179,43 +202,47 @@
         @media (max-width: 500px) {
             .container { padding: 16px; }
             .options button { flex: 1 1 45%; }
+            .header { flex-direction: column; align-items: stretch; }
+            .lang-btn { align-self: flex-end; }
         }
     </style>
 </head>
 <body>
 <div class="container" id="app">
-    <h1>🫀 食管癌风险 <small>Project S.H.E.</small></h1>
+    <div class="header">
+        <h1>🫀 <span id="titleMain">食管癌风险</span> <small>Project S.H.E.</small></h1>
+        <button class="lang-btn" id="langToggle">English</button>
+    </div>
 
-    <div class="disclaimer">
+    <div class="disclaimer" id="disclaimer">
         <strong>⚠️ 免责声明：</strong> 本工具仅供 <strong>教育及科研</strong> 用途，不提供医疗建议、诊断或治疗。如有健康问题，请咨询专业医生。
     </div>
 
-    <!-- 所有问题由 JavaScript 动态生成 -->
     <div id="questions"></div>
 
     <div style="text-align: center; margin: 10px 0 6px;">
-        <button class="btn-reset" id="resetBtn">🔄 重新评估</button>
+        <button class="btn-reset" id="resetBtn">🔄 <span id="resetText">重新评估</span></button>
     </div>
 
     <div id="resultArea" class="result-area" style="display: none;">
-        <div class="score-label">总风险评分</div>
+        <div class="score-label" id="scoreLabel">总风险评分</div>
         <div class="score-number" id="totalScore">0.00</div>
         <div style="margin: 6px 0 4px;">
             <span class="risk-badge" id="riskBadge">低风险</span>
         </div>
         <div class="advice-text" id="adviceText">继续保持良好习惯！</div>
-        <button class="detail-toggle" id="detailToggle">📋 查看详细得分</button>
+        <button class="detail-toggle" id="detailToggle">📋 <span id="detailToggleText">查看详细得分</span></button>
         <table class="detail-table" id="detailTable"></table>
     </div>
 
-    <div class="footer-note">
+    <div class="footer-note" id="footerNote">
         本工具基于2023年中国食管癌风险因素系统综述 · 仅供学术参考
     </div>
 </div>
 
 <script>
     // ============================================
-    // 常量（与 Python 版本完全一致）
+    // 常量（保持不变）
     // ============================================
     const RISK_TOTAL = 24.52;
     const PROT_TOTAL = 4.115;
@@ -225,53 +252,207 @@
     const OFFSET = 14.4;
 
     // ============================================
-    // 风险因素（16个）
+    // 语言包
+    // ============================================
+    const LANG = {
+        zh: {
+            title: '食管癌风险',
+            disclaimer: '⚠️ 免责声明： 本工具仅供 教育及科研 用途，不提供医疗建议、诊断或治疗。如有健康问题，请咨询专业医生。',
+            reset: '重新评估',
+            scoreLabel: '总风险评分',
+            detailView: '查看详细得分',
+            detailHide: '隐藏详细得分',
+            footer: '本工具基于2023年中国食管癌风险因素系统综述 · 仅供学术参考',
+            riskSection: '⚠️ 风险因素',
+            protectSection: '🛡️ 保护因素（可降低风险）',
+            noDetail: '所有选项均为最低风险或无暴露',
+            riskLevels: {
+                low: '低风险',
+                moderate: '中等风险',
+                high: '高风险',
+                veryHigh: '极高风险'
+            },
+            advice: {
+                low: '保持良好生活习惯，定期关注健康。',
+                moderate: '建议改善饮食和生活方式。如有疑虑可咨询医生。',
+                high: '建议咨询消化科医生，进行进一步评估。',
+                veryHigh: '请尽快就医，进行胃镜等相关检查。'
+            },
+            factors: {
+                age: '年龄',
+                sex: '性别',
+                smoking: '吸烟',
+                alcohol: '饮酒',
+                hot: '热烫饮食',
+                eatfast: '进食过快',
+                pickled: '腌制食品',
+                moldy: '霉变食物',
+                hard: '喜硬食',
+                firstfh: '一级亲属家族史',
+                secondfh: '二级亲属家族史',
+                hpv: 'HPV感染',
+                trauma: '心理创伤',
+                dep: '抑郁',
+                anger: '生闷气/压抑愤怒',
+                irritable: '易怒性格',
+                veg: '新鲜蔬菜',
+                fruit: '新鲜水果',
+                soy: '豆类制品',
+                meat: '肉蛋奶类',
+                tea: '饮茶 (<65°C)',
+                outgoing: '外向性格',
+                relation: '良好人际关系'
+            },
+            opts: {
+                almostNever: '几乎从不',
+                occasionally: '偶尔',
+                often: '经常',
+                almostEveryday: '几乎每天',
+                yes: '是',
+                no: '否',
+                female: '女性',
+                male: '男性',
+                age1: '< 51岁',
+                age2: '51–60岁',
+                age3: '> 60岁'
+            }
+        },
+        en: {
+            title: 'Esophageal Cancer Risk',
+            disclaimer: '⚠️ Disclaimer: This tool is for educational and research purposes only. It does NOT provide medical advice, diagnosis, or treatment. Please consult a qualified healthcare professional for any health concerns.',
+            reset: 'Reset',
+            scoreLabel: 'Total Risk Score',
+            detailView: 'View Detailed Score',
+            detailHide: 'Hide Detailed Score',
+            footer: 'Based on 2023 systematic review of esophageal cancer risk factors in Chinese populations · For academic reference only',
+            riskSection: '⚠️ Risk Factors',
+            protectSection: '🛡️ Protective Factors (Reduce Risk)',
+            noDetail: 'All selections are at lowest risk or no exposure',
+            riskLevels: {
+                low: 'Low Risk',
+                moderate: 'Moderate Risk',
+                high: 'High Risk',
+                veryHigh: 'Very High Risk'
+            },
+            advice: {
+                low: 'Maintain healthy habits and continue regular check-ups.',
+                moderate: 'Consider improving diet and lifestyle. Consult a doctor if concerned.',
+                high: 'It is recommended to consult a gastroenterologist for further evaluation.',
+                veryHigh: 'Please seek medical attention as soon as possible for comprehensive examination.'
+            },
+            factors: {
+                age: 'Age',
+                sex: 'Sex',
+                smoking: 'Smoking',
+                alcohol: 'Alcohol Consumption',
+                hot: 'Hot Food & Drinks',
+                eatfast: 'Eating Too Fast',
+                pickled: 'Pickled Food',
+                moldy: 'Moldy Food',
+                hard: 'Hard Food',
+                firstfh: 'First-degree Family History',
+                secondfh: 'Second-degree Family History',
+                hpv: 'HPV Infection',
+                trauma: 'Psychological Trauma',
+                dep: 'Depression',
+                anger: 'Anger Suppression',
+                irritable: 'Irritable Personality',
+                veg: 'Fresh Vegetables',
+                fruit: 'Fresh Fruits',
+                soy: 'Soy Products',
+                meat: 'Meat, Egg, Dairy',
+                tea: 'Tea (<65°C)',
+                outgoing: 'Outgoing Personality',
+                relation: 'Good Interpersonal Relationships'
+            },
+            opts: {
+                almostNever: 'Almost Never',
+                occasionally: 'Occasionally',
+                often: 'Often',
+                almostEveryday: 'Almost Everyday',
+                yes: 'Yes',
+                no: 'No',
+                female: 'Female',
+                male: 'Male',
+                age1: '< 51 years',
+                age2: '51–60 years',
+                age3: '> 60 years'
+            }
+        }
+    };
+
+    // ============================================
+    // 风险因素数据（与语言无关）
     // ============================================
     const riskFactors = [
-        { id: 'age', label: '年龄', options: [{text:'< 51岁', score:0}, {text:'51–60岁', score:4.68}, {text:'> 60岁', score:14.03}] },
-        { id: 'sex', label: '性别', options: [{text:'女性', score:0}, {text:'男性', score:1.22}] },
-        { id: 'smoke', label: '吸烟', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:1.01}, {text:'经常', score:2.01}, {text:'几乎每天', score:3.02}] },
-        { id: 'alcohol', label: '饮酒', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:1.82}, {text:'经常', score:3.64}, {text:'几乎每天', score:5.46}] },
-        { id: 'hot', label: '热烫饮食', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:2.13}, {text:'经常', score:4.27}, {text:'几乎每天', score:6.40}] },
-        { id: 'eatfast', label: '进食过快', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:1.58}, {text:'经常', score:3.15}, {text:'几乎每天', score:4.73}] },
-        { id: 'pickled', label: '腌制食品', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:1.28}, {text:'经常', score:2.56}, {text:'几乎每天', score:3.83}] },
-        { id: 'moldy', label: '霉变食物', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:1.84}, {text:'经常', score:3.67}, {text:'几乎每天', score:5.51}] },
-        { id: 'hard', label: '喜硬食', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:1.67}, {text:'经常', score:3.34}, {text:'几乎每天', score:5.02}] },
-        { id: 'firstfh', label: '一级亲属家族史', options: [{text:'无', score:0}, {text:'有', score:11.09}] },
-        { id: 'secondfh', label: '二级亲属家族史', options: [{text:'无', score:0}, {text:'有', score:1.84}] },
-        { id: 'hpv', label: 'HPV感染', options: [{text:'无', score:0}, {text:'有', score:9.38}] },
-        { id: 'trauma', label: '心理创伤', options: [{text:'无', score:0}, {text:'有', score:5.55}] },
-        { id: 'dep', label: '抑郁', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:4.08}, {text:'经常', score:8.16}, {text:'几乎每天', score:12.23}] },
-        { id: 'anger', label: '生闷气/压抑愤怒', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:2.03}, {text:'经常', score:4.05}, {text:'几乎每天', score:6.08}] },
-        { id: 'irritable', label: '易怒性格', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:1.54}, {text:'经常', score:3.07}, {text:'几乎每天', score:4.61}] }
+        { id: 'age', key: 'age', optKeys: ['age1', 'age2', 'age3'], scores: [0, 4.68, 14.03] },
+        { id: 'sex', key: 'sex', optKeys: ['female', 'male'], scores: [0, 1.22] },
+        { id: 'smoke', key: 'smoking', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 1.01, 2.01, 3.02] },
+        { id: 'alcohol', key: 'alcohol', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 1.82, 3.64, 5.46] },
+        { id: 'hot', key: 'hot', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 2.13, 4.27, 6.40] },
+        { id: 'eatfast', key: 'eatfast', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 1.58, 3.15, 4.73] },
+        { id: 'pickled', key: 'pickled', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 1.28, 2.56, 3.83] },
+        { id: 'moldy', key: 'moldy', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 1.84, 3.67, 5.51] },
+        { id: 'hard', key: 'hard', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 1.67, 3.34, 5.02] },
+        { id: 'firstfh', key: 'firstfh', optKeys: ['no', 'yes'], scores: [0, 11.09] },
+        { id: 'secondfh', key: 'secondfh', optKeys: ['no', 'yes'], scores: [0, 1.84] },
+        { id: 'hpv', key: 'hpv', optKeys: ['no', 'yes'], scores: [0, 9.38] },
+        { id: 'trauma', key: 'trauma', optKeys: ['no', 'yes'], scores: [0, 5.55] },
+        { id: 'dep', key: 'dep', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 4.08, 8.16, 12.23] },
+        { id: 'anger', key: 'anger', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 2.03, 4.05, 6.08] },
+        { id: 'irritable', key: 'irritable', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 1.54, 3.07, 4.61] }
+    ];
+
+    const protectiveFactors = [
+        { id: 'veg', key: 'veg', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 5.10, 10.21, 15.31] },
+        { id: 'fruit', key: 'fruit', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 4.29, 8.59, 12.88] },
+        { id: 'soy', key: 'soy', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 4.62, 9.23, 13.85] },
+        { id: 'meat', key: 'meat', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 6.89, 13.77, 20.66] },
+        { id: 'tea', key: 'tea', optKeys: ['almostNever', 'occasionally', 'often', 'almostEveryday'], scores: [0, 2.23, 4.46, 6.68] },
+        { id: 'outgoing', key: 'outgoing', optKeys: ['no', 'yes'], scores: [0, 14.82] },
+        { id: 'relation', key: 'relation', optKeys: ['no', 'yes'], scores: [0, 15.80] }
     ];
 
     // ============================================
-    // 保护因素（7个）
+    // 状态
     // ============================================
-    const protectiveFactors = [
-        { id: 'veg', label: '新鲜蔬菜', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:5.10}, {text:'经常', score:10.21}, {text:'几乎每天', score:15.31}] },
-        { id: 'fruit', label: '新鲜水果', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:4.29}, {text:'经常', score:8.59}, {text:'几乎每天', score:12.88}] },
-        { id: 'soy', label: '豆类制品', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:4.62}, {text:'经常', score:9.23}, {text:'几乎每天', score:13.85}] },
-        { id: 'meat', label: '肉蛋奶类', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:6.89}, {text:'经常', score:13.77}, {text:'几乎每天', score:20.66}] },
-        { id: 'tea', label: '饮茶 (<65°C)', options: [{text:'几乎从不', score:0}, {text:'偶尔', score:2.23}, {text:'经常', score:4.46}, {text:'几乎每天', score:6.68}] },
-        { id: 'outgoing', label: '外向性格', options: [{text:'否', score:0}, {text:'是', score:14.82}] },
-        { id: 'relation', label: '良好人际关系', options: [{text:'否', score:0}, {text:'是', score:15.80}] }
-    ];
+    let currentLang = 'zh';
+    const container = document.getElementById('questions');
+    const selections = {};
+
+    // ============================================
+    // 获取翻译文本
+    // ============================================
+    function t(key) {
+        const keys = key.split('.');
+        let val = LANG[currentLang];
+        for (let k of keys) {
+            if (val && val[k] !== undefined) val = val[k];
+            else return key;
+        }
+        return val;
+    }
+
+    function getFactorLabel(key) {
+        return t('factors.' + key);
+    }
+
+    function getOptText(optKey) {
+        return t('opts.' + optKey);
+    }
 
     // ============================================
     // 渲染界面
     // ============================================
-    const container = document.getElementById('questions');
-    const selections = {};
-
     function renderQuestions() {
+        container.innerHTML = '';
+
         // 风险因素部分
         const riskSection = document.createElement('div');
         riskSection.className = 'section';
         const riskTitle = document.createElement('div');
         riskTitle.className = 'section-title';
-        riskTitle.textContent = '⚠️ 风险因素';
+        riskTitle.textContent = t('riskSection');
         riskSection.appendChild(riskTitle);
         container.appendChild(riskSection);
 
@@ -280,13 +461,13 @@
             group.className = 'question';
             const label = document.createElement('span');
             label.className = 'question-label';
-            label.textContent = f.label;
+            label.textContent = getFactorLabel(f.key);
             group.appendChild(label);
             const optDiv = document.createElement('div');
             optDiv.className = 'options';
-            f.options.forEach((opt, idx) => {
+            f.optKeys.forEach((optKey, idx) => {
                 const btn = document.createElement('button');
-                btn.textContent = opt.text;
+                btn.textContent = getOptText(optKey);
                 btn.dataset.factorId = f.id;
                 btn.dataset.idx = idx;
                 btn.addEventListener('click', function() {
@@ -300,7 +481,7 @@
             });
             group.appendChild(optDiv);
             container.appendChild(group);
-            selections[f.id] = 0;
+            if (selections[f.id] === undefined) selections[f.id] = 0;
         });
 
         // 保护因素部分
@@ -308,7 +489,7 @@
         protSection.className = 'section';
         const protTitle = document.createElement('div');
         protTitle.className = 'section-title';
-        protTitle.textContent = '🛡️ 保护因素（可降低风险）';
+        protTitle.textContent = t('protectSection');
         protSection.appendChild(protTitle);
         container.appendChild(protSection);
 
@@ -317,13 +498,13 @@
             group.className = 'question';
             const label = document.createElement('span');
             label.className = 'question-label';
-            label.textContent = f.label;
+            label.textContent = getFactorLabel(f.key);
             group.appendChild(label);
             const optDiv = document.createElement('div');
             optDiv.className = 'options';
-            f.options.forEach((opt, idx) => {
+            f.optKeys.forEach((optKey, idx) => {
                 const btn = document.createElement('button');
-                btn.textContent = opt.text;
+                btn.textContent = getOptText(optKey);
                 btn.dataset.factorId = f.id;
                 btn.dataset.idx = idx;
                 btn.addEventListener('click', function() {
@@ -337,106 +518,129 @@
             });
             group.appendChild(optDiv);
             container.appendChild(group);
-            selections[f.id] = 0;
+            if (selections[f.id] === undefined) selections[f.id] = 0;
         });
 
-        // 默认选中第一个选项
+        // 选中状态恢复
         document.querySelectorAll('.question').forEach(q => {
-            const firstBtn = q.querySelector('.options button');
-            if (firstBtn) firstBtn.classList.add('selected');
+            const btns = q.querySelectorAll('.options button');
+            // 找到对应的因素
+            const firstBtn = btns[0];
+            if (firstBtn) {
+                const factorId = firstBtn.dataset.factorId;
+                const selIdx = selections[factorId] || 0;
+                btns.forEach((b, i) => {
+                    b.classList.toggle('selected', i === selIdx);
+                });
+            }
         });
     }
+
+    // ============================================
+    // 更新所有文字（不重新渲染）
+    // ============================================
+    function updateTexts() {
+        document.getElementById('titleMain').textContent = t('title');
+        document.getElementById('disclaimer').innerHTML = t('disclaimer');
+        document.getElementById('resetText').textContent = t('reset');
+        document.getElementById('scoreLabel').textContent = t('scoreLabel');
+        document.getElementById('detailToggleText').textContent = document.getElementById('detailTable').style.display === 'table' ? t('detailHide') : t('detailView');
+        document.getElementById('footerNote').textContent = t('footer');
+        // 重新渲染问题（因为选项文字也变了）
+        renderQuestions();
+        // 重新计算结果
+        calculateAndShow();
+    }
+
+    // ============================================
+    // 语言切换
+    // ============================================
+    document.getElementById('langToggle').addEventListener('click', function() {
+        currentLang = currentLang === 'zh' ? 'en' : 'zh';
+        this.textContent = currentLang === 'zh' ? 'English' : '中文';
+        updateTexts();
+    });
 
     // ============================================
     // 计算与显示
     // ============================================
     function calculateAndShow() {
-        // 计算风险总分（原始权重和）
         let riskScore = 0;
         riskFactors.forEach(f => {
-            const idx = selections[f.id];
-            riskScore += f.options[idx].score;
+            const idx = selections[f.id] || 0;
+            riskScore += f.scores[idx];
         });
 
-        // 计算保护总分（原始权重和）
         let protScore = 0;
         protectiveFactors.forEach(f => {
-            const idx = selections[f.id];
-            protScore += f.options[idx].score;
+            const idx = selections[f.id] || 0;
+            protScore += f.scores[idx];
         });
 
-        // 最终得分（与 Python 代码完全一致）
         const totalScore = (riskScore * RISK_COEFF) - (protScore * PROT_COEFF) + OFFSET;
         const displayScore = Math.min(100, Math.max(0, totalScore));
 
-        // 风险等级
         let level, advice, cssClass;
         if (displayScore <= 20) {
-            level = '低风险';
-            advice = '保持良好生活习惯，定期关注健康。';
+            level = t('riskLevels.low');
+            advice = t('advice.low');
             cssClass = 'risk-low';
         } else if (displayScore <= 45) {
-            level = '中等风险';
-            advice = '建议改善饮食和生活方式。如有疑虑可咨询医生。';
+            level = t('riskLevels.moderate');
+            advice = t('advice.moderate');
             cssClass = 'risk-medium';
         } else if (displayScore <= 70) {
-            level = '高风险';
-            advice = '建议咨询消化科医生，进行进一步评估。';
+            level = t('riskLevels.high');
+            advice = t('advice.high');
             cssClass = 'risk-high';
         } else {
-            level = '极高风险';
-            advice = '请尽快就医，进行胃镜等相关检查。';
+            level = t('riskLevels.veryHigh');
+            advice = t('advice.veryHigh');
             cssClass = 'risk-veryhigh';
         }
 
-        // 更新界面
         document.getElementById('totalScore').textContent = displayScore.toFixed(2);
         const badge = document.getElementById('riskBadge');
         badge.textContent = level;
         badge.className = 'risk-badge ' + cssClass;
         document.getElementById('adviceText').textContent = advice;
 
-        // ============================================
-        // ✅ 关键修正：明细得分乘以对应的系数
-        // ============================================
+        // 详细得分
         const table = document.getElementById('detailTable');
         table.innerHTML = '';
 
         let riskDetail = '';
         riskFactors.forEach(f => {
-            const idx = selections[f.id];
-            const raw = f.options[idx].score;
-            const weighted = raw * RISK_COEFF;   // ← 乘以风险系数
+            const idx = selections[f.id] || 0;
+            const weighted = f.scores[idx] * RISK_COEFF;
             if (weighted > 0.01) {
-                riskDetail += `<tr><td class="factor-name">${f.label}</td><td class="factor-score">${weighted.toFixed(2)}</td></tr>`;
+                riskDetail += `<tr><td class="factor-name">${getFactorLabel(f.key)}</td><td class="factor-score">${weighted.toFixed(2)}</td></tr>`;
             }
         });
         let protDetail = '';
         protectiveFactors.forEach(f => {
-            const idx = selections[f.id];
-            const raw = f.options[idx].score;
-            const weighted = raw * PROT_COEFF;   // ← 乘以保护系数
+            const idx = selections[f.id] || 0;
+            const weighted = f.scores[idx] * PROT_COEFF;
             if (weighted > 0.01) {
-                protDetail += `<tr><td class="factor-name">${f.label}</td><td class="factor-score">${weighted.toFixed(2)}</td></tr>`;
+                protDetail += `<tr><td class="factor-name">${getFactorLabel(f.key)}</td><td class="factor-score">${weighted.toFixed(2)}</td></tr>`;
             }
         });
 
-        // 风险因素明细
         if (riskDetail) {
-            table.innerHTML += `<tr><td colspan="2" style="font-weight:600; padding-top:8px;">风险因素</td></tr>`;
+            table.innerHTML += `<tr><td colspan="2" style="font-weight:600; padding-top:8px;">${t('riskSection')}</td></tr>`;
             table.innerHTML += riskDetail;
         }
-        // 保护因素明细
         if (protDetail) {
-            table.innerHTML += `<tr><td colspan="2" style="font-weight:600; padding-top:8px;">保护因素</td></tr>`;
+            table.innerHTML += `<tr><td colspan="2" style="font-weight:600; padding-top:8px;">${t('protectSection')}</td></tr>`;
             table.innerHTML += protDetail;
         }
-        // 如果都没有得分
         if (!riskDetail && !protDetail) {
-            table.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#888;">所有选项均为最低风险或无暴露</td></tr>`;
+            table.innerHTML = `<tr><td colspan="2" style="text-align:center; color:#888;">${t('noDetail')}</td></tr>`;
         }
 
         document.getElementById('resultArea').style.display = 'block';
+        // 更新明细按钮文字
+        document.getElementById('detailToggleText').textContent = table.style.display === 'table' ? t('detailHide') : t('detailView');
     }
 
     // ============================================
@@ -457,16 +661,16 @@
     });
 
     // ============================================
-    // 切换详细得分显示
+    // 切换详细得分
     // ============================================
     document.getElementById('detailToggle').addEventListener('click', function() {
         const table = document.getElementById('detailTable');
         if (table.style.display === 'table') {
             table.style.display = 'none';
-            this.textContent = '📋 查看详细得分';
+            document.getElementById('detailToggleText').textContent = t('detailView');
         } else {
             table.style.display = 'table';
-            this.textContent = '📋 隐藏详细得分';
+            document.getElementById('detailToggleText').textContent = t('detailHide');
         }
     });
 
@@ -475,11 +679,16 @@
     // ============================================
     renderQuestions();
     window.addEventListener('load', function() {
+        // 确保默认选中
         document.querySelectorAll('.question').forEach(q => {
-            const firstBtn = q.querySelector('.options button');
+            const btns = q.querySelectorAll('.options button');
+            const firstBtn = btns[0];
             if (firstBtn) {
-                q.querySelectorAll('.options button').forEach(b => b.classList.remove('selected'));
-                firstBtn.classList.add('selected');
+                const factorId = firstBtn.dataset.factorId;
+                const selIdx = selections[factorId] || 0;
+                btns.forEach((b, i) => {
+                    b.classList.toggle('selected', i === selIdx);
+                });
             }
         });
         calculateAndShow();
